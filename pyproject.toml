@@ -1,0 +1,29 @@
+[project]
+name = "aws-anomalies"
+version = "0.1.0"
+description = "Détection d'anomalies visuelles non supervisée sur pièces industrielles (MVTec AD, PatchCore, anomalib)."
+requires-python = ">=3.10"
+dependencies = [
+    "anomalib>=2.0.0",
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+    "omegaconf>=2.3.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "jupyter>=1.0.0",
+]
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+torchvision = [{ index = "pytorch-cpu" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
