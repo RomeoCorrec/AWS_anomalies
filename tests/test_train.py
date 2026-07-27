@@ -28,6 +28,8 @@ def test_build_model_constructs_without_error() -> None:
             "layers": ["layer2", "layer3"],
             "coreset_sampling_ratio": 0.1,
             "num_neighbors": 9,
+            "image_size": [256, 256],
+            "pre_trained": False,
         }
     )
 
