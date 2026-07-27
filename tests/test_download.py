@@ -32,15 +32,38 @@ def test_verify_category_false_without_defect_dir(tmp_path: Path) -> None:
     assert verify_category("bottle", tmp_path) is False
 
 
-def test_download_category_wraps_errors(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    class _FailingDataModule:
-        def __init__(self, root: str, category: str) -> None:
-            pass
+class _FailingDataModule:
+    def __init__(self, root: str, category: str) -> None:
+        pass
 
-        def prepare_data(self) -> None:
-            raise RuntimeError("404")
+    def prepare_data(self) -> None:
+        raise RuntimeError("404")
+
+
+def test_download_category_wraps_errors_when_both_sources_fail(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def _failing_hf_download(category: str, root: Path) -> None:
+        raise RuntimeError("network unavailable")
 
     monkeypatch.setattr("src.data.download.MVTecAD", _FailingDataModule)
+    monkeypatch.setattr("src.data.download._download_from_huggingface", _failing_hf_download)
 
     with pytest.raises(MVTecDownloadError):
         download_category("bottle", tmp_path)
+
+
+def test_download_category_falls_back_to_huggingface_on_anomalib_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[str] = []
+
+    def _fake_hf_download(category: str, root: Path) -> None:
+        calls.append(category)
+
+    monkeypatch.setattr("src.data.download.MVTecAD", _FailingDataModule)
+    monkeypatch.setattr("src.data.download._download_from_huggingface", _fake_hf_download)
+
+    download_category("bottle", tmp_path)
+
+    assert calls == ["bottle"]
