@@ -6,7 +6,7 @@ __pycache__/
 .ipynb_checkpoints/
 .claude/
 
-data/
+/data/
 
-results/*.csv
+results/*
 !results/.gitkeep

@@ -1,0 +1,5 @@
+data_config: "config/data/mvtec.yaml"
+model_config: "config/model/patchcore.yaml"
+overrides:
+  category: "screw"
+  coreset_sampling_ratio: 0.01
