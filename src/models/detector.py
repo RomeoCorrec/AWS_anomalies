@@ -1,6 +1,8 @@
 """Charge un modèle PatchCore entraîné et prédit un score d'anomalie par image."""
 from __future__ import annotations
 
+import argparse
+import json
 from pathlib import Path
 
 from anomalib.engine import Engine
@@ -28,3 +30,25 @@ class AnomalyDetector:
         )
         score = float(predictions[0].pred_score.item())
         return {"score": score, "is_anomaly": score >= self.threshold}
+
+
+def main() -> None:
+    """CLI : prédit le score d'anomalie d'une image via un checkpoint déployé."""
+    parser = argparse.ArgumentParser(description="Prédit le score d'anomalie d'une image avec PatchCore.")
+    parser.add_argument("--experiment", required=True, type=Path)
+    parser.add_argument("--checkpoint", required=True, type=Path)
+    parser.add_argument("--threshold", required=True, type=float)
+    parser.add_argument("--image", required=True, type=Path)
+    args = parser.parse_args()
+
+    detector = AnomalyDetector(
+        experiment_path=args.experiment,
+        checkpoint_path=args.checkpoint,
+        threshold=args.threshold,
+    )
+    result = detector.predict(args.image)
+    print(json.dumps(result))
+
+
+if __name__ == "__main__":
+    main()

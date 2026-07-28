@@ -1,0 +1,13 @@
+FROM python:3.10-slim
+
+RUN pip install --no-cache-dir uv
+
+WORKDIR /app
+
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
+
+COPY src/ src/
+COPY config/ config/
+
+ENTRYPOINT ["uv", "run", "python", "-m", "src.models.detector"]

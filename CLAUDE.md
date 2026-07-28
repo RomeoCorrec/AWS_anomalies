@@ -87,7 +87,7 @@ Mettre à jour cette section au fil du projet.
 - [x] PatchCore fonctionnel sur `bottle`
 - [x] Ablation backbone et coreset ratio
 - [x] Calibration du seuil
-- [ ] Packaging inférence local
+- [x] Packaging inférence local
 - [ ] S3 et compte AWS
 - [ ] Entraînement SageMaker
 - [ ] Endpoint Serverless
