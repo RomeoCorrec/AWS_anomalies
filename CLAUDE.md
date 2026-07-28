@@ -82,11 +82,11 @@ L'analyse et l'argumentaire sont à moi.
 
 Mettre à jour cette section au fil du projet.
 
-- [ ] Setup repo et environnement
-- [ ] Dataset téléchargé et exploré
-- [ ] PatchCore fonctionnel sur `bottle`
-- [ ] Ablation backbone et coreset ratio
-- [ ] Calibration du seuil
+- [x] Setup repo et environnement
+- [x] Dataset téléchargé et exploré
+- [x] PatchCore fonctionnel sur `bottle`
+- [x] Ablation backbone et coreset ratio
+- [x] Calibration du seuil
 - [ ] Packaging inférence local
 - [ ] S3 et compte AWS
 - [ ] Entraînement SageMaker

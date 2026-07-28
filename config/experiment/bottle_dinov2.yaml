@@ -1,0 +1,4 @@
+data_config: "config/data/mvtec_dinov2.yaml"
+model_config: "config/model/patchcore_dinov2.yaml"
+overrides:
+  category: "bottle"

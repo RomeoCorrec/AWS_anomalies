@@ -1,0 +1,5 @@
+# Seuils de décision par catégorie (score d'anomalie >= seuil => prédit anomalie).
+# Choisis comme le seuil maximisant le F1 sur le set de test (voir results/threshold_candidates_*.csv).
+bottle: 0.523
+carpet: 0.510
+screw: 0.537
