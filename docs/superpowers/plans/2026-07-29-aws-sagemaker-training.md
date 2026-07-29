@@ -221,7 +221,7 @@ Expected: build succeeds (same dependency layer as the existing inference `Docke
 
 - [ ] **Step 3: Manual verification — smoke test the entrypoint locally**
 
-**Important:** `anomalib`'s `MVTecAD` datamodule checks `(root / category).is_dir()` and
+**Important #1:** `anomalib`'s `MVTecAD` datamodule checks `(root / category).is_dir()` and
 auto-downloads the *full* MVTec AD archive (all 15 categories, ~5GB) if that path is
 missing — triggered automatically by `Engine.fit()` (Lightning calls `prepare_data()`
 even though our own code never does). The mount below must therefore expose a `bottle/`
@@ -230,6 +230,17 @@ subdirectory under the mounted root — mount the *parent* of the local `bottle`
 `/data/training/bottle/...` and never re-downloads. This mirrors how the real SageMaker
 channel will be structured in Task 6 (S3 URI one level above `bottle/`).
 
+**Important #2 (Git Bash / Windows only):** Git Bash's MSYS layer silently rewrites any
+argument that looks like a leading `/path` — including the *value* of `-e
+SM_CHANNEL_TRAINING=/data/training` (not just `-v` mount paths) — into a Windows path
+(e.g. `C:/Program Files/Git/data/training`) before Docker ever sees it. Inside the Linux
+container this becomes a nonexistent path, so `(root / category).is_dir()` is `False`
+and the full-archive download triggers even with the correct mount from Important #1.
+Prefix the `docker run` invocation with `MSYS_NO_PATHCONV=1` to stop this rewrite. This
+is purely a local-verification artifact of running Docker from Git Bash on Windows — the
+real SageMaker platform sets `SM_CHANNEL_TRAINING` natively inside the job container, no
+Git Bash involved, so this does not affect Task 6.
+
 Run (mounts local MVTec AD data as if it were the SageMaker training channel, and a
 hyperparameters.json as SageMaker would write it):
 
@@ -237,7 +248,7 @@ hyperparameters.json as SageMaker would write it):
 mkdir -p /tmp/sm-smoke/config /tmp/sm-smoke/model
 echo '{"experiment": "config/experiment/bottle_wideresnet50.yaml"}' > /tmp/sm-smoke/config/hyperparameters.json
 
-docker run --rm \
+MSYS_NO_PATHCONV=1 docker run --rm \
   -v "$(cygpath -w "$(pwd)/data/mvtec"):/data/training:ro" \
   -v "$(cygpath -w "/tmp/sm-smoke/config"):/opt/ml/input/config:ro" \
   -v "$(cygpath -w "/tmp/sm-smoke/model"):/opt/ml/model" \
