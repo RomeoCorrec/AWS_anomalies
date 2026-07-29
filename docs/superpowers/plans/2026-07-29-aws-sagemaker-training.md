@@ -221,21 +221,35 @@ Expected: build succeeds (same dependency layer as the existing inference `Docke
 
 - [ ] **Step 3: Manual verification — smoke test the entrypoint locally**
 
-Run (mounts local `bottle` data as if it were the SageMaker training channel, and a hyperparameters.json as SageMaker would write it):
+**Important:** `anomalib`'s `MVTecAD` datamodule checks `(root / category).is_dir()` and
+auto-downloads the *full* MVTec AD archive (all 15 categories, ~5GB) if that path is
+missing — triggered automatically by `Engine.fit()` (Lightning calls `prepare_data()`
+even though our own code never does). The mount below must therefore expose a `bottle/`
+subdirectory under the mounted root — mount the *parent* of the local `bottle` folder
+(`data/mvtec`), not `data/mvtec/bottle` directly, so the container sees
+`/data/training/bottle/...` and never re-downloads. This mirrors how the real SageMaker
+channel will be structured in Task 6 (S3 URI one level above `bottle/`).
+
+Run (mounts local MVTec AD data as if it were the SageMaker training channel, and a
+hyperparameters.json as SageMaker would write it):
 
 ```bash
 mkdir -p /tmp/sm-smoke/config /tmp/sm-smoke/model
 echo '{"experiment": "config/experiment/bottle_wideresnet50.yaml"}' > /tmp/sm-smoke/config/hyperparameters.json
 
 docker run --rm \
-  -v "$(cygpath -w "$(pwd)/data/mvtec/bottle"):/data/training:ro" \
+  -v "$(cygpath -w "$(pwd)/data/mvtec"):/data/training:ro" \
   -v "$(cygpath -w "/tmp/sm-smoke/config"):/opt/ml/input/config:ro" \
   -v "$(cygpath -w "/tmp/sm-smoke/model"):/opt/ml/model" \
   -e SM_CHANNEL_TRAINING=/data/training \
   aws-anomalies-train:local
 ```
 
-Expected: `Checkpoint écrit dans /opt/ml/model/model.ckpt`; `/tmp/sm-smoke/model/model.ckpt` exists locally afterward. This proves the container works before spending SageMaker instance-hours on it.
+Expected: `Checkpoint écrit dans /opt/ml/model/model.ckpt`; `/tmp/sm-smoke/model/model.ckpt`
+exists locally afterward; container logs show **no** MVTec AD download step (training
+starts directly with feature extraction — a run of a couple minutes, not ~20+ minutes).
+This proves the container works, and that it does not silently redownload the dataset,
+before spending SageMaker instance-hours on it.
 
 - [ ] **Step 4: Commit**
 
@@ -266,7 +280,7 @@ Attach this inline policy (`aws-anomalies-sagemaker-execution-policy`):
       "Action": ["s3:GetObject", "s3:ListBucket"],
       "Resource": [
         "arn:aws:s3:::aws-anomalies-mvtec-romeo",
-        "arn:aws:s3:::aws-anomalies-mvtec-romeo/mvtec/bottle/*"
+        "arn:aws:s3:::aws-anomalies-mvtec-romeo/mvtec/*"
       ]
     },
     {
@@ -425,7 +439,7 @@ def test_launch_training_wires_estimator_and_returns_model_data(monkeypatch) -> 
     model_data = launch_training.launch_training(
         image_uri="155466261331.dkr.ecr.eu-west-1.amazonaws.com/aws-anomalies-train:latest",
         role_arn="arn:aws:iam::155466261331:role/aws-anomalies-sagemaker-execution",
-        training_data_uri="s3://aws-anomalies-mvtec-romeo/mvtec/bottle/",
+        training_data_uri="s3://aws-anomalies-mvtec-romeo/mvtec/",
         output_path="s3://aws-anomalies-mvtec-romeo/output/",
         experiment_path="config/experiment/bottle_wideresnet50.yaml",
     )
@@ -533,7 +547,7 @@ Run:
 uv run python -m src.aws.launch_training \
   --image-uri 155466261331.dkr.ecr.eu-west-1.amazonaws.com/aws-anomalies-train:latest \
   --role-arn arn:aws:iam::155466261331:role/aws-anomalies-sagemaker-execution \
-  --training-data-uri s3://aws-anomalies-mvtec-romeo/mvtec/bottle/ \
+  --training-data-uri s3://aws-anomalies-mvtec-romeo/mvtec/ \
   --output-path s3://aws-anomalies-mvtec-romeo/output/ \
   --experiment config/experiment/bottle_wideresnet50.yaml
 ```
