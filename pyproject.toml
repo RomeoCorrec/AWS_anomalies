@@ -14,6 +14,7 @@ dependencies = [
     # v3 reworked the Estimator API surface used in src/aws/launch_training.py;
     # revisit when moving that module to the v3 interfaces.
     "sagemaker<3",
+    "flask>=3.1.3",
 ]
 
 [dependency-groups]
