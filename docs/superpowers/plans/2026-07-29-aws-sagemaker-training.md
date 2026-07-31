@@ -128,6 +128,7 @@ from src.models.train import build_datamodule, build_model
 
 HYPERPARAMETERS_PATH = Path("/opt/ml/input/config/hyperparameters.json")
 DEFAULT_MODEL_DIR = Path("/opt/ml/model")
+DEFAULT_DATA_ROOT = Path("/opt/ml/input/data/training")
 
 
 def load_experiment_path(hyperparameters_path: Path = HYPERPARAMETERS_PATH) -> Path:
@@ -157,7 +158,9 @@ def run_training(experiment_path: Path, data_root: Path, model_dir: Path) -> Pat
 def main() -> None:
     """Point d'entrée exécuté par le container au lancement du Training Job."""
     experiment_path = load_experiment_path()
-    data_root = Path(os.environ["SM_CHANNEL_TRAINING"])
+    # SM_CHANNEL_TRAINING is only injected by the SageMaker Training Toolkit, which this
+    # minimal BYOC image doesn't include; a real job mounts the channel at this fixed path.
+    data_root = Path(os.environ.get("SM_CHANNEL_TRAINING", str(DEFAULT_DATA_ROOT)))
     model_dir = Path(os.environ.get("SM_MODEL_DIR", str(DEFAULT_MODEL_DIR)))
 
     destination = run_training(experiment_path, data_root, model_dir)
@@ -216,7 +219,7 @@ ENTRYPOINT ["uv", "run", "python", "-m", "src.aws.train_entrypoint"]
 
 - [ ] **Step 2: Manual verification — build locally**
 
-Run: `docker build -f Dockerfile.sagemaker-train -t aws-anomalies-train:local .`
+Run: `docker build --platform linux/amd64 -f Dockerfile.sagemaker-train -t aws-anomalies-train:local .`
 Expected: build succeeds (same dependency layer as the existing inference `Dockerfile`, cached if built recently).
 
 - [ ] **Step 3: Manual verification — smoke test the entrypoint locally**
@@ -231,17 +234,20 @@ subdirectory under the mounted root — mount the *parent* of the local `bottle`
 channel will be structured in Task 6 (S3 URI one level above `bottle/`).
 
 **Important #2 (Git Bash / Windows only):** Git Bash's MSYS layer silently rewrites any
-argument that looks like a leading `/path` — including the *value* of `-e
-SM_CHANNEL_TRAINING=/data/training` (not just `-v` mount paths) — into a Windows path
-(e.g. `C:/Program Files/Git/data/training`) before Docker ever sees it. Inside the Linux
-container this becomes a nonexistent path, so `(root / category).is_dir()` is `False`
-and the full-archive download triggers even with the correct mount from Important #1.
-Prefix the `docker run` invocation with `MSYS_NO_PATHCONV=1` to stop this rewrite. This
-is purely a local-verification artifact of running Docker from Git Bash on Windows — the
-real SageMaker platform sets `SM_CHANNEL_TRAINING` natively inside the job container, no
-Git Bash involved, so this does not affect Task 6.
+argument that looks like a leading `/path` — including `-v` mount destinations like
+`/opt/ml/input/data/training` — into a Windows path (e.g. `C:/Program
+Files/Git/opt/ml/input/data/training`) before Docker ever sees it. Inside the Linux
+container this would make the mount destination wrong, so `(root / category).is_dir()`
+would be `False` and the full-archive download would trigger even with the correct host
+path from Important #1. Prefix the `docker run` invocation with `MSYS_NO_PATHCONV=1` to
+stop this rewrite. This is purely a local-verification artifact of running Docker from
+Git Bash on Windows, not something the real SageMaker platform is exposed to — the
+production container mounts the `training` channel directly at
+`/opt/ml/input/data/training` (no env var involved; see `DEFAULT_DATA_ROOT` in Task 1),
+so the smoke test below mounts at that same fixed path rather than relying on an
+`SM_CHANNEL_TRAINING` override, to exercise the exact fallback branch production uses.
 
-Run (mounts local MVTec AD data as if it were the SageMaker training channel, and a
+Run (mounts local MVTec AD data at the real SageMaker BYOC training-channel path, and a
 hyperparameters.json as SageMaker would write it):
 
 ```bash
@@ -249,10 +255,9 @@ mkdir -p /tmp/sm-smoke/config /tmp/sm-smoke/model
 echo '{"experiment": "config/experiment/bottle_wideresnet50.yaml"}' > /tmp/sm-smoke/config/hyperparameters.json
 
 MSYS_NO_PATHCONV=1 docker run --rm \
-  -v "$(cygpath -w "$(pwd)/data/mvtec"):/data/training:ro" \
+  -v "$(cygpath -w "$(pwd)/data/mvtec"):/opt/ml/input/data/training:ro" \
   -v "$(cygpath -w "/tmp/sm-smoke/config"):/opt/ml/input/config:ro" \
   -v "$(cygpath -w "/tmp/sm-smoke/model"):/opt/ml/model" \
-  -e SM_CHANNEL_TRAINING=/data/training \
   aws-anomalies-train:local
 ```
 
@@ -552,6 +557,16 @@ git commit -m "feat: add SageMaker training job launcher"
 **No repo files — real AWS execution and cross-checking against the existing local inference code.**
 
 - [ ] **Step 1: Launch the real Training Job**
+
+**Forward-looking cost note:** `--training-data-uri` points at the shared `mvtec/`
+prefix (parent of `bottle/`), not a `bottle`-specific prefix, because the datamodule
+needs `bottle/` to be a subdirectory of the mounted root. A SageMaker channel downloads
+every key under the prefix it's given — today only `bottle` lives under `mvtec/`, so this
+is free, but once `screw` or `carpet` is uploaded there too, every `bottle` training job
+will silently download all categories present, tripling transfer time and billed
+instance-time for no benefit. When a second category lands, give each category its own
+channel prefix (e.g. `s3://…/channels/bottle/bottle/`) rather than pointing at the shared
+parent.
 
 Run:
 ```bash

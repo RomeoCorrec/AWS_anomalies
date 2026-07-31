@@ -46,10 +46,14 @@ création (`ml.m5.xlarge`, ~0.23 $/h en eu-west-1).
 
 1. Lit le chemin de la config d'expérience à utiliser (hyperparamètre SageMaker,
    ex. `config/experiment/bottle_wideresnet50.yaml`, embarqué dans l'image).
-2. Charge la config via `load_experiment_config`, puis **surcharge `cfg.root`** avec la
-   variable d'environnement `SM_CHANNEL_TRAINING` (fixée par SageMaker au chemin local où
-   les données du canal `training` — le contenu S3 `mvtec/bottle/` — sont montées dans le
-   container). C'est la seule différence de config avec un entraînement local.
+2. Charge la config via `load_experiment_config`, puis **surcharge `cfg.root`** avec le
+   chemin fixe `/opt/ml/input/data/training` (`DEFAULT_DATA_ROOT`), où SageMaker monte les
+   données du canal `training` — le contenu S3 `mvtec/` — dans le container. Ce chemin
+   n'est **pas** fourni par une variable d'environnement : `SM_CHANNEL_TRAINING` n'est
+   injectée que par le SageMaker Training Toolkit, absent de ce container BYOC minimal ;
+   `os.environ.get("SM_CHANNEL_TRAINING", ...)` n'existe que comme filet de repli utilisé
+   par les tests locaux, la production passe toujours par le chemin fixe. C'est la seule
+   différence de config avec un entraînement local.
 3. Appelle `build_datamodule(cfg)` / `build_model(cfg)` (de `train.py`, importés tels
    quels) puis `Engine().fit(...)`.
 4. Copie le checkpoint résultant (même mécanisme que `deploy_checkpoint`, via
@@ -77,7 +81,7 @@ création (`ml.m5.xlarge`, ~0.23 $/h en eu-west-1).
 - **Nouveau rôle `aws-anomalies-sagemaker-execution`** (assumé par le service
   SageMaker, jamais par un utilisateur) :
   - Trust policy : principal `sagemaker.amazonaws.com`.
-  - Permissions : lecture sur `s3://aws-anomalies-mvtec-romeo/mvtec/bottle/*`, écriture
+  - Permissions : lecture sur `s3://aws-anomalies-mvtec-romeo/mvtec/*`, écriture
     sur `s3://aws-anomalies-mvtec-romeo/output/*` (chemin de sortie des jobs), pull sur le
     repo ECR `aws-anomalies-train`, écriture de logs CloudWatch
     (`logs:CreateLogGroup`/`CreateLogStream`/`PutLogEvents`, scopé au groupe de logs
@@ -98,8 +102,9 @@ création (`ml.m5.xlarge`, ~0.23 $/h en eu-west-1).
 - Construit un `sagemaker.estimator.Estimator` : image = URI ECR poussée, rôle =
   `aws-anomalies-sagemaker-execution`, `instance_type="ml.m5.xlarge"`,
   `instance_count=1`, canal d'entrée `training` = URI S3
-  `s3://aws-anomalies-mvtec-romeo/mvtec/bottle/`, hyperparamètre = chemin de la config
-  d'expérience.
+  `s3://aws-anomalies-mvtec-romeo/mvtec/` (parent de `bottle/`, pour que le datamodule
+  retrouve `bottle/` en sous-répertoire du root monté), hyperparamètre = chemin de la
+  config d'expérience.
 - `.fit(...)`, bloquant jusqu'à la fin du job (logs streamés dans le terminal via le SDK).
 - Imprime l'URI S3 du `model.tar.gz` produit.
 - CLI : `python -m src.aws.launch_training --experiment config/experiment/bottle_wideresnet50.yaml`.
@@ -124,6 +129,14 @@ création (`ml.m5.xlarge`, ~0.23 $/h en eu-west-1).
 - Terraform complet.
 - Entraînement `screw`/`carpet` sur SageMaker (viendra si besoin, même mécanisme,
   nouveau fichier d'expérience).
+- **Risque de coût à anticiper** : le canal SageMaker pointe sur le préfixe partagé
+  `mvtec/` plutôt que sur un préfixe spécifique à `bottle`. Un canal SageMaker télécharge
+  toutes les clés sous le préfixe donné — aujourd'hui seul `bottle` s'y trouve, donc c'est
+  gratuit, mais dès que `screw` ou `carpet` sera uploadé sous `mvtec/`, chaque job
+  d'entraînement `bottle` téléchargera aussi les autres catégories, triplant le temps de
+  transfert et le coût facturé sans bénéfice. À ce moment-là, donner à chaque catégorie
+  son propre préfixe de canal (ex. `s3://…/channels/bottle/bottle/`) plutôt que de
+  partager le préfixe parent.
 
 ## Tests prévus
 

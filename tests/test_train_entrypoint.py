@@ -60,3 +60,26 @@ def test_run_training_overrides_root_and_copies_checkpoint(tmp_path, monkeypatch
     assert captured_cfg["root"] == str(tmp_path / "sagemaker_data")
     assert destination == model_dir / "model.ckpt"
     assert destination.read_bytes() == b"fake-weights"
+
+
+def test_main_defaults_to_byoc_paths_when_env_vars_absent(monkeypatch) -> None:
+    monkeypatch.delenv("SM_CHANNEL_TRAINING", raising=False)
+    monkeypatch.delenv("SM_MODEL_DIR", raising=False)
+    monkeypatch.setattr(
+        train_entrypoint, "load_experiment_path", lambda: Path("config/experiment/bottle_wideresnet50.yaml")
+    )
+
+    captured_args = {}
+
+    def _fake_run_training(experiment_path, data_root, model_dir):
+        captured_args["experiment_path"] = experiment_path
+        captured_args["data_root"] = data_root
+        captured_args["model_dir"] = model_dir
+        return model_dir / "model.ckpt"
+
+    monkeypatch.setattr(train_entrypoint, "run_training", _fake_run_training)
+
+    train_entrypoint.main()
+
+    assert captured_args["data_root"] == Path("/opt/ml/input/data/training")
+    assert captured_args["model_dir"] == Path("/opt/ml/model")

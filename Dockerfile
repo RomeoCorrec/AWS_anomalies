@@ -10,4 +10,4 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY src/ src/
 COPY config/ config/
 
-ENTRYPOINT ["uv", "run", "python", "-m", "src.models.detector"]
+ENTRYPOINT ["uv", "run", "--no-sync", "python", "-m", "src.models.detector"]
