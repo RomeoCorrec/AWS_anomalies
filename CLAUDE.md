@@ -34,22 +34,6 @@ AWS (semaine 2) : S3 → SageMaker Training Job → ECR → SageMaker Serverless
 - Les résultats d'expérience sont écrits en CSV avec la config complète en colonnes,
   pour être reproductibles et comparables
 
-## Structure
-
-```
-config/          YAML de configuration (dataset, modèle, expériences)
-src/
-  data/          téléchargement, vérification, chargement du dataset
-  models/        wrapper PatchCore, classe AnomalyDetector
-  eval/          métriques, seuillage, génération des figures
-  aws/           scripts SageMaker et Lambda (semaine 2)
-notebooks/       exploration et analyse des résultats
-terraform/       infrastructure (semaine 2)
-results/         CSV d'expériences, figures
-docs/            architecture, troubleshooting, décisions
-tests/
-```
-
 ## Méthode de travail
 
 1. Poser des questions avant d'implémenter si quelque chose est ambigu
@@ -88,8 +72,8 @@ Mettre à jour cette section au fil du projet.
 - [x] Ablation backbone et coreset ratio
 - [x] Calibration du seuil
 - [x] Packaging inférence local
-- [ ] S3 et compte AWS
-- [ ] Entraînement SageMaker
+- [x] S3 et compte AWS
+- [x] Entraînement SageMaker
 - [ ] Endpoint Serverless
 - [ ] Lambda + API Gateway
 - [ ] Terraform complet
