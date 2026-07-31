@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import os
 import tempfile
 from pathlib import Path
 
@@ -50,8 +51,13 @@ def create_app(detector: AnomalyDetector) -> Flask:
             return jsonify({"error": "invalid image"}), 400
 
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-            image.save(tmp.name)
-            result = detector.predict(Path(tmp.name))
+            tmp_path = tmp.name
+            image.save(tmp_path)
+
+        try:
+            result = detector.predict(Path(tmp_path))
+        finally:
+            os.unlink(tmp_path)
 
         return jsonify(result), 200
 
