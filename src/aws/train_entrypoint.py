@@ -14,6 +14,7 @@ from src.models.train import build_datamodule, build_model
 
 HYPERPARAMETERS_PATH = Path("/opt/ml/input/config/hyperparameters.json")
 DEFAULT_MODEL_DIR = Path("/opt/ml/model")
+DEFAULT_DATA_ROOT = Path("/opt/ml/input/data/training")
 
 
 def load_experiment_path(hyperparameters_path: Path = HYPERPARAMETERS_PATH) -> Path:
@@ -43,7 +44,9 @@ def run_training(experiment_path: Path, data_root: Path, model_dir: Path) -> Pat
 def main() -> None:
     """Point d'entrée exécuté par le container au lancement du Training Job."""
     experiment_path = load_experiment_path()
-    data_root = Path(os.environ["SM_CHANNEL_TRAINING"])
+    # SM_CHANNEL_TRAINING is only injected by the SageMaker Training Toolkit, which this
+    # minimal BYOC image doesn't include; a real job mounts the channel at this fixed path.
+    data_root = Path(os.environ.get("SM_CHANNEL_TRAINING", str(DEFAULT_DATA_ROOT)))
     model_dir = Path(os.environ.get("SM_MODEL_DIR", str(DEFAULT_MODEL_DIR)))
 
     destination = run_training(experiment_path, data_root, model_dir)
