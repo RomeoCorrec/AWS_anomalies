@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 
-from sagemaker.estimator import Estimator  # noqa: F401 - import order workaround for sagemaker circular import
 from sagemaker.model import Model
 from sagemaker.serverless import ServerlessInferenceConfig
 
