@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import tempfile
 from pathlib import Path
 
 from anomalib.engine import Engine
@@ -19,7 +20,12 @@ class AnomalyDetector:
         self.model = build_model(cfg)
         self.checkpoint_path = checkpoint_path
         self.threshold = threshold
-        self.engine = Engine()
+        # anomalib's visualization callback writes result images under default_root_dir;
+        # the SageMaker Serverless Inference container's filesystem is read-only outside
+        # /tmp (and /opt/ml), so the default "results" relative path fails with a
+        # PermissionError at inference time. tempfile.gettempdir() is writable everywhere
+        # this runs: locally, in the packaging Docker image, and in SageMaker containers.
+        self.engine = Engine(default_root_dir=tempfile.gettempdir())
 
     def predict(self, image_path: Path) -> dict[str, float | bool]:
         """Retourne {"score": float, "is_anomaly": bool} pour une image donnée."""
