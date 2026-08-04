@@ -74,7 +74,7 @@ Mettre à jour cette section au fil du projet.
 - [x] Packaging inférence local
 - [x] S3 et compte AWS
 - [x] Entraînement SageMaker
-- [ ] Endpoint Serverless
+- [x] Endpoint Serverless
 - [ ] Lambda + API Gateway
 - [ ] Terraform complet
 - [ ] README et benchmark final
