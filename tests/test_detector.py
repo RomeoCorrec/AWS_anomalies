@@ -25,7 +25,7 @@ class _FakeEngine:
 
 def test_predict_returns_score_and_is_anomaly_above_threshold(monkeypatch) -> None:
     monkeypatch.setattr(detector, "load_experiment_config", lambda path: OmegaConf.create({}))
-    monkeypatch.setattr(detector, "build_model", lambda cfg: object())
+    monkeypatch.setattr(detector, "build_model", lambda cfg, visualizer=True: object())
     monkeypatch.setattr(detector, "Engine", _FakeEngine)
 
     det = detector.AnomalyDetector(
@@ -45,7 +45,7 @@ def test_predict_below_threshold_is_not_anomaly(monkeypatch) -> None:
             return [_FakeBatch(0.1)]
 
     monkeypatch.setattr(detector, "load_experiment_config", lambda path: OmegaConf.create({}))
-    monkeypatch.setattr(detector, "build_model", lambda cfg: object())
+    monkeypatch.setattr(detector, "build_model", lambda cfg, visualizer=True: object())
     monkeypatch.setattr(detector, "Engine", _LowScoreEngine)
 
     det = detector.AnomalyDetector(
@@ -64,7 +64,7 @@ def test_engine_uses_writable_default_root_dir(monkeypatch) -> None:
     # A relative "results" path fails with PermissionError in read-only-filesystem
     # containers (e.g. SageMaker Serverless Inference) — it must be a writable tempdir.
     monkeypatch.setattr(detector, "load_experiment_config", lambda path: OmegaConf.create({}))
-    monkeypatch.setattr(detector, "build_model", lambda cfg: object())
+    monkeypatch.setattr(detector, "build_model", lambda cfg, visualizer=True: object())
     monkeypatch.setattr(detector, "Engine", _FakeEngine)
 
     det = detector.AnomalyDetector(
@@ -74,3 +74,23 @@ def test_engine_uses_writable_default_root_dir(monkeypatch) -> None:
     )
 
     assert det.engine.kwargs["default_root_dir"] == tempfile.gettempdir()
+
+
+def test_detector_builds_model_without_visualizer(monkeypatch) -> None:
+    captured_kwargs: dict = {}
+
+    def _fake_build_model(cfg, **kwargs):
+        captured_kwargs.update(kwargs)
+        return object()
+
+    monkeypatch.setattr(detector, "load_experiment_config", lambda path: OmegaConf.create({}))
+    monkeypatch.setattr(detector, "build_model", _fake_build_model)
+    monkeypatch.setattr(detector, "Engine", _FakeEngine)
+
+    detector.AnomalyDetector(
+        experiment_path=Path("config/experiment/bottle_wideresnet50.yaml"),
+        checkpoint_path=Path("results/deployed/bottle/model.ckpt"),
+        threshold=0.523,
+    )
+
+    assert captured_kwargs["visualizer"] is False

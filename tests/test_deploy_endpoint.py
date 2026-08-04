@@ -40,3 +40,8 @@ def test_deploy_endpoint_wires_model_and_serverless_config(monkeypatch) -> None:
         "memory_size_in_mb": 2048,
         "max_concurrency": 1,
     }
+
+
+def test_default_memory_size_is_4096() -> None:
+    # 2048 MB OOMs loading the PatchCore memory bank — measured on the real endpoint.
+    assert deploy_endpoint.DEFAULT_MEMORY_SIZE_MB == 4096

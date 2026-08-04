@@ -6,7 +6,8 @@ import argparse
 from sagemaker.model import Model
 from sagemaker.serverless import ServerlessInferenceConfig
 
-DEFAULT_MEMORY_SIZE_MB = 2048
+# 2048 MB OOMs loading the PatchCore memory bank — measured on the real endpoint
+DEFAULT_MEMORY_SIZE_MB = 4096
 DEFAULT_MAX_CONCURRENCY = 1
 
 

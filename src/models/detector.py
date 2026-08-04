@@ -17,7 +17,7 @@ class AnomalyDetector:
 
     def __init__(self, experiment_path: Path, checkpoint_path: Path, threshold: float) -> None:
         cfg = load_experiment_config(experiment_path)
-        self.model = build_model(cfg)
+        self.model = build_model(cfg, visualizer=False)
         self.checkpoint_path = checkpoint_path
         self.threshold = threshold
         # anomalib's visualization callback writes result images under default_root_dir;

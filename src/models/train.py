@@ -27,7 +27,7 @@ def build_datamodule(cfg: DictConfig) -> MVTecAD:
     )
 
 
-def build_model(cfg: DictConfig) -> Patchcore:
+def build_model(cfg: DictConfig, visualizer: bool = True) -> Patchcore:
     """Construit le modèle PatchCore à partir de la config fusionnée."""
     pre_processor = Patchcore.configure_pre_processor(image_size=tuple(cfg.image_size))
     return Patchcore(
@@ -37,6 +37,7 @@ def build_model(cfg: DictConfig) -> Patchcore:
         coreset_sampling_ratio=cfg.coreset_sampling_ratio,
         num_neighbors=cfg.num_neighbors,
         pre_processor=pre_processor,
+        visualizer=visualizer,
     )
 
 

@@ -14,7 +14,7 @@
 
 - Region `eu-west-1` only.
 - Least privilege: every IAM change is additive and scoped to specific ARNs (no `*` on resources except where AWS mandates it, e.g. `ecr:GetAuthorizationToken`).
-- Serverless config: `memory_size_in_mb=2048`, `max_concurrency=1` (confirmed with the user).
+- Serverless config: `memory_size_in_mb=4096`, `max_concurrency=1` (2048 MB OOMs loading the PatchCore memory bank — confirmed on the real endpoint).
 - No hardcoded values that should be config — the threshold comes from `config/threshold.yaml`, never inlined as a literal in Python source.
 - Reuse `AnomalyDetector` (`src/models/detector.py`) as-is — no duplicated prediction logic.
 - Reuse `load_experiment_config` (`src/config.py`) — no duplicated config-merging logic.
@@ -500,7 +500,7 @@ def test_deploy_endpoint_wires_model_and_serverless_config(monkeypatch) -> None:
         role_arn="arn:aws:iam::155466261331:role/aws-anomalies-sagemaker-execution",
         model_data_url="s3://aws-anomalies-mvtec-romeo/output/job/model.tar.gz",
         endpoint_name="aws-anomalies-bottle",
-        memory_size_in_mb=2048,
+        memory_size_in_mb=4096,
         max_concurrency=1,
     )
 
@@ -511,7 +511,7 @@ def test_deploy_endpoint_wires_model_and_serverless_config(monkeypatch) -> None:
     assert model.kwargs["role"] == "arn:aws:iam::155466261331:role/aws-anomalies-sagemaker-execution"
     assert model.deploy_kwargs["endpoint_name"] == "aws-anomalies-bottle"
     assert model.deploy_kwargs["serverless_inference_config"] == {
-        "memory_size_in_mb": 2048,
+        "memory_size_in_mb": 4096,
         "max_concurrency": 1,
     }
 ```
@@ -532,7 +532,7 @@ import argparse
 from sagemaker.model import Model
 from sagemaker.serverless import ServerlessInferenceConfig
 
-DEFAULT_MEMORY_SIZE_MB = 2048
+DEFAULT_MEMORY_SIZE_MB = 4096
 DEFAULT_MAX_CONCURRENCY = 1
 
 

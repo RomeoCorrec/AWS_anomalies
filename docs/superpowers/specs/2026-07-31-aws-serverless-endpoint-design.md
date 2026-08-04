@@ -65,7 +65,7 @@ CLI qui construit un `sagemaker.model.Model` (image ECR de serving +
 `model_data` = URI S3 du `model.tar.gz` produit par le job de training) et
 appelle `.deploy()` avec un `ServerlessInferenceConfig` :
 
-- `memory_size_in_mb=2048`
+- `memory_size_in_mb=4096`
 - `max_concurrency=1`
 
 Réutilise le rôle d'exécution IAM déjà créé pour le training
