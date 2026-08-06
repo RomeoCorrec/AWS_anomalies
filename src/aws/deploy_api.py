@@ -65,7 +65,7 @@ def deploy_api(
         handler="lambda_predict.handler",
         role_arn=predict_role_arn,
         zip_bytes=zip_source(PREDICT_SOURCE_PATH),
-        environment={"SAGEMAKER_ENDPOINT_NAME": "aws-anomalies-bottle", "AWS_REGION": region},
+        environment={"SAGEMAKER_ENDPOINT_NAME": "aws-anomalies-bottle"},
         timeout=30,
     )
     authorizer_arn = deploy_lambda_function(
