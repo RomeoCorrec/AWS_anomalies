@@ -47,11 +47,11 @@ def handler(event: dict, context) -> dict:
     except ClientError as exc:
         error = exc.response.get("Error", {})
         if error.get("Code") == "ModelError":
-            status_code = error.get("OriginalStatusCode", 500)
+            status_code = exc.response.get("OriginalStatusCode", 500)
             try:
-                payload = json.loads(error.get("OriginalMessage", "{}"))
+                payload = json.loads(exc.response.get("OriginalMessage", "{}"))
             except (TypeError, ValueError):
-                payload = {"error": error.get("OriginalMessage", "model error")}
+                payload = {"error": exc.response.get("OriginalMessage", "model error")}
             return _response(status_code, payload)
         return _response(503, {"error": "endpoint unavailable"})
 

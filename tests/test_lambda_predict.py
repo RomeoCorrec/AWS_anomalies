@@ -54,12 +54,9 @@ def test_handler_relays_prediction_for_valid_image(monkeypatch) -> None:
 def test_handler_relays_model_error_status_and_body(monkeypatch) -> None:
     error = ClientError(
         error_response={
-            "Error": {
-                "Code": "ModelError",
-                "Message": "boom",
-                "OriginalStatusCode": 400,
-                "OriginalMessage": json.dumps({"error": "invalid image"}),
-            }
+            "Error": {"Code": "ModelError", "Message": "boom"},
+            "OriginalStatusCode": 400,
+            "OriginalMessage": json.dumps({"error": "invalid image"}),
         },
         operation_name="InvokeEndpoint",
     )
