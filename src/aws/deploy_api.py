@@ -113,14 +113,14 @@ def deploy_api(
 
     lambda_client.add_permission(
         FunctionName=PREDICT_FUNCTION_NAME,
-        StatementId="apigateway-invoke-predict",
+        StatementId=f"apigateway-invoke-predict-{api_id}",
         Action="lambda:InvokeFunction",
         Principal="apigateway.amazonaws.com",
         SourceArn=f"arn:aws:execute-api:{region}:{account_id}:{api_id}/*/*/predict",
     )
     lambda_client.add_permission(
         FunctionName=AUTHORIZER_FUNCTION_NAME,
-        StatementId="apigateway-invoke-authorizer",
+        StatementId=f"apigateway-invoke-authorizer-{api_id}",
         Action="lambda:InvokeFunction",
         Principal="apigateway.amazonaws.com",
         SourceArn=f"arn:aws:execute-api:{region}:{account_id}:{api_id}/authorizers/{authorizer['AuthorizerId']}",
