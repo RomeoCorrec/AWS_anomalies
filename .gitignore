@@ -12,3 +12,10 @@ __pycache__/
 results/*
 !results/.gitkeep
 tools/terraform.exe
+
+terraform/.terraform/
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/terraform.tfvars
+terraform/*.tfplan
+terraform/build/
