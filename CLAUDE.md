@@ -75,6 +75,6 @@ Mettre à jour cette section au fil du projet.
 - [x] S3 et compte AWS
 - [x] Entraînement SageMaker
 - [x] Endpoint Serverless
-- [ ] Lambda + API Gateway
-- [ ] Terraform complet
+- [x] Lambda + API Gateway
+- [x] Terraform complet
 - [ ] README et benchmark final
