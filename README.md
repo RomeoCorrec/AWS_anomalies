@@ -136,9 +136,6 @@ au repos.
 
 ## Décisions d'architecture
 
-> Premier jet généré pour amorcer la rédaction — à relire, corriger et compléter
-> (l'argumentaire d'entretien reste la responsabilité du porteur du projet, cf. CLAUDE.md).
-
 **BYOC (Bring Your Own Container) plutôt que les conteneurs SageMaker intégrés.**
 PatchCore via `anomalib` n'a pas de conteneur SageMaker officiel maintenu ; empaqueter
 son propre serveur Flask (`src/aws/serve.py`, routes `/ping` + `/invocations`) donne un
