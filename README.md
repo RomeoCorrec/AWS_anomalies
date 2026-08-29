@@ -136,7 +136,56 @@ au repos.
 
 ## Décisions d'architecture
 
-_À rédiger — voir CLAUDE.md : ce contenu reste à la charge du porteur du projet._
+> Premier jet généré pour amorcer la rédaction — à relire, corriger et compléter
+> (l'argumentaire d'entretien reste la responsabilité du porteur du projet, cf. CLAUDE.md).
+
+**BYOC (Bring Your Own Container) plutôt que les conteneurs SageMaker intégrés.**
+PatchCore via `anomalib` n'a pas de conteneur SageMaker officiel maintenu ; empaqueter
+son propre serveur Flask (`src/aws/serve.py`, routes `/ping` + `/invocations`) donne un
+contrôle total sur les dépendances (`anomalib`, `torch` CPU) et évite de contraindre le
+projet aux hyperparamètres exposés par un conteneur générique. Coût : maintenance du
+Dockerfile de serving et du contrat HTTP soi-même.
+
+**SageMaker Serverless Inference plutôt qu'un endpoint temps réel dédié.**
+Le trafic attendu (tests ponctuels, pas de production continue) ne justifie pas un
+endpoint facturé à l'heure en continu. Le compromis est la latence de cold start (d'où
+le timeout Lambda fixé à 30s minimum) et `memory_size_in_mb=4096` (2048 MB s'est révélé
+insuffisant en test réel — le modèle PatchCore + WideResNet50 dépasse ce budget mémoire
+au chargement).
+
+**Lambda + authorizer API-key plutôt qu'IAM auth ou Cognito.**
+Un authorizer `REQUEST` avec un secret partagé (`x-api-key`) est suffisant pour un usage
+personnel/démo à un seul consommateur, et bien plus simple à mettre en place et à
+expliquer qu'IAM SigV4 ou un pool Cognito. Ne conviendrait pas en l'état pour plusieurs
+consommateurs ou une rotation de clé fréquente (limitation connue, voir la review de
+`src/aws/deploy_api.py`).
+
+**Terraform : import des ressources existantes, jamais de recréation.**
+Le compte AWS avait déjà S3/ECR/IAM en place avant l'introduction de Terraform (sous-
+projets 1-3, provisionnés manuellement). Plutôt que de détruire/recréer (risque de perte
+de données sur le bucket, de changement d'URI ECR), toutes les ressources préexistantes
+sont importées telles quelles, et leur policy de permissions (S3/ECR/IAM growth au fil
+des sous-projets) n'est volontairement *pas* redéclarée en HCL — la redéclarer sans
+connaître son contenu exact aurait risqué de retirer une permission encore utilisée par
+un script existant, ou de provoquer un auto-verrouillage IAM.
+
+**State Terraform local plutôt qu'un backend S3 distant.**
+Choix assumé pour un projet solo : pas de risque d'écriture concurrente sur le state, pas
+d'infra supplémentaire (bucket S3 + verrou DynamoDB) à maintenir pour un seul opérateur.
+Un vrai projet d'équipe nécessiterait un backend partagé avec verrouillage.
+
+**`deploy_api.py` conservé en parallèle de Terraform malgré la duplication.**
+Terraform est désormais le chemin de déploiement normal pour Lambda/API Gateway, mais le
+script manuel `deploy_api.py` reste dans le repo comme trace du chemin de déploiement
+initial (avant Terraform) et comme filet de secours ponctuel. Risque documenté et assumé
+(cf. `terraform/README.md`) : ne jamais le relancer après un `terraform apply`, sous
+peine de divergence entre le state Terraform et la réalité AWS.
+
+**Principe du moindre privilège appliqué de façon incrémentale, pas anticipée.**
+Chaque permission IAM a été ajoutée au moment où une action précise échouait avec
+`AccessDenied`, jamais en anticipant un besoin futur avec un wildcard de confort. Plus
+lent à itérer, mais garantit qu'aucune permission accordée n'est inutilisée — vérifiable
+en relisant l'historique git des policies.
 
 ## Tests
 
