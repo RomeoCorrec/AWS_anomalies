@@ -2,9 +2,6 @@
 
 resource "aws_iam_user" "local" {
   name = "aws-anomalies-local"
-
-  tags = {
-  }
 }
 
 resource "aws_iam_role" "sagemaker_execution" {
