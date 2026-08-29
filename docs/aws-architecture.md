@@ -24,10 +24,15 @@ SageMaker Model → EndpointConfig (Serverless) → Endpoint
    │
    ▼
 HTTP /invocations → {"score": float, "is_anomaly": bool}
+   ▲
+   │
+Lambda aws-anomalies-predict (relai)
+   ▲
+   │
+API Gateway (POST /predict, authorizer x-api-key) → client
 ```
 
-Le sous-projet suivant (Lambda + API Gateway, pas commencé) invoquera cet
-endpoint depuis une Lambda exposée via API Gateway.
+Voir Sous-projet 4 pour le détail Lambda/API Gateway/Terraform.
 
 ## Sous-projet 1 — S3 et compte AWS
 
@@ -74,6 +79,23 @@ au Training Job, il doit être explicitement recréé pour être retesté (voir
 commande dans `docs/superpowers/plans/2026-07-31-aws-serverless-endpoint.md`,
 Task 6).
 
+## Sous-projet 4 — Lambda + API Gateway, infra permanente en Terraform
+
+**Spec Lambda/API Gateway :** `docs/superpowers/specs/2026-08-05-aws-lambda-api-gateway-design.md`
+**Plan Lambda/API Gateway :** `docs/superpowers/plans/2026-08-05-aws-lambda-api-gateway.md`
+**Spec Terraform :** `docs/superpowers/specs/2026-08-21-terraform-infra-design.md`
+**Plan Terraform :** `docs/superpowers/plans/2026-08-21-terraform-infra.md`
+
+| Ressource | Détail |
+|---|---|
+| Lambda `aws-anomalies-predict` | `src/aws/lambda_predict.py` — relaie vers l'endpoint SageMaker Serverless (`SAGEMAKER_ENDPOINT_NAME`), timeout 30s |
+| Lambda `aws-anomalies-authorizer` | `src/aws/lambda_authorizer.py` — authorizer `REQUEST` API Gateway v2, vérifie `x-api-key` |
+| API Gateway | HTTP API `aws-anomalies-api`, route `POST /predict`, autorisation `CUSTOM` via l'authorizer |
+| Rôles IAM | `aws-anomalies-predict-lambda-execution`, `aws-anomalies-authorizer-lambda-execution` — un rôle dédié par Lambda, permissions minimales (invoke endpoint SageMaker scopé, logs CloudWatch scopés à la fonction) |
+| Infra permanente | Depuis ce sous-projet, S3, ECR, IAM (rôles Lambda), Lambda et API Gateway sont gérés par Terraform (`terraform/`) — ressources existantes importées (jamais recréées), nouvelles ressources créées via `terraform apply`. Voir `terraform/README.md`. L'endpoint SageMaker Serverless et les Training Jobs restent hors périmètre Terraform (ressources éphémères, pilotées par les scripts `deploy_endpoint.py`/`launch_training.py`) |
+| Validation E2E | `POST /predict` avec image défectueuse `bottle` → score 0.9098 (identique à la référence du sous-projet 3) ; requête sans `x-api-key` → `401` (rejet par l'authorizer) |
+| Note IAM | `apigateway:*` sur les actions de création d'API v2 impose `Resource: "arn:aws:apigateway:{region}::/apis*"` (wildcard de fin obligatoire côté service) — même type d'exception documentée que `ecr:GetAuthorizationToken` avec `Resource: "*"` |
+
 ## IAM — permissions actuelles
 
 Principe du moindre privilège tout du long : aucune permission `*` sur les
@@ -92,7 +114,5 @@ pour debug) ont été ajoutées puis retirées une fois leur usage terminé.
 
 ## Hors périmètre (pas encore construit)
 
-- Lambda + API Gateway (prochain sous-projet)
-- Terraform (infra actuellement provisionnée manuellement via console/CLI)
 - Monitoring CloudWatch dédié (alarmes, dashboards)
 - Support d'autres catégories que `bottle` (`carpet`, `screw`)

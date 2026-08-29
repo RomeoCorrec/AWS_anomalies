@@ -1,1 +1,4 @@
-# Complété à la Task 7 avec l'URL d'invocation de l'API Gateway.
+output "predict_invoke_url" {
+  description = "URL d'invocation de POST /predict."
+  value       = "${aws_apigatewayv2_api.main.api_endpoint}/predict"
+}
